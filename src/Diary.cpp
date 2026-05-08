@@ -1,5 +1,7 @@
 #include "Diary.h"
 
+#include "AppBase.h"
+
 #include <random>
 #include <range/v3/action/sort.hpp>
 
@@ -397,7 +399,7 @@ Do not make up facts. Rely exclusively on provided context.
     AVector<OpenAIChat::Message> messages = {
         OpenAIChat::Message {
             .role = OpenAIChat::Message::Role::USER,
-            .content = query,
+            .content = "<character>\n{}\n</character>\n\n{}"_format(AppBase::getSystemPrompt(), query),
         },
     };
 
