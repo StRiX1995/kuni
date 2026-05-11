@@ -10,8 +10,6 @@ namespace config {
     static constexpr bool SHOULD_BEGIN_DIALOGS = true;
 
     static constexpr bool RANDOMLY_GO_SLEEP = true;
-    static constexpr bool DEEP_CHATLIST_QUERY = false;
-    static constexpr bool DEEP_DIALOG_QUERY = false;
 
     // Every time the AI calls #send_telegram_message, it will be reminded that it can generate images and voice notes.
     // This will happen with TOOL_REMINDER_CHANCE * 100%. E.g. 0.1f -> 10% chance every time a message is sent, 0f for no reminders at all.
@@ -468,10 +466,16 @@ world) in the following format:
     };
 
     static constexpr auto PAPIK_CHAT_ID = 625207005;
-    
-    static constexpr bool LOCKDOWN_MODE = false; // If true, Kuni will only see/receive notifications/read chats from PAPIK_CHAT_ID
 
-    static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 20000;
+    enum class LockdownMode {
+        NONE, // public
+        CONTACTS_ONLY,
+        PAPIK_ONLY,
+    };
+    
+    static constexpr LockdownMode LOCKDOWN_MODE = LockdownMode::PAPIK_ONLY;
+
+    static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 40000;
     static constexpr auto DIARY_AVERAGE_ENTRY_SIZE = 1000;
     static constexpr auto DIARY_INJECTION_MAX_LENGTH = DIARY_AVERAGE_ENTRY_SIZE * 0; // superseded by queryAI
     static constexpr auto DIARY_SLEEP_MAX_LENGTH = DIARY_AVERAGE_ENTRY_SIZE * 40;

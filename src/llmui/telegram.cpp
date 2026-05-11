@@ -9,6 +9,7 @@
 #include "image.h"
 #include "malicious_payloads.h"
 #include "AUI/Util/kAUI.h"
+#include "util/is_accessible_from_lockdown.h"
 
 #include <range/v3/algorithm/max_element.hpp>
 
@@ -60,11 +61,8 @@ AFuture<APath> llmui::fetchMedia(ITelegramClient& telegram, td::td_api::object_p
 [[nodiscard]]
 AFuture<>
 llmui::formatChatSingle(ITelegramClient& telegram, AString& result, td::td_api::chat& chat) {
-    // Skip non-PAPIK chats in lockdown mode
-    if constexpr (config::LOCKDOWN_MODE) {
-        if (chat.id_ != config::PAPIK_CHAT_ID) {
-            co_return;
-        }
+    if (! co_await util::isAccessibleFromLockdown(telegram, chat.id_)) {
+        co_return;
     }
 
     auto type = [&]() -> AStringView {

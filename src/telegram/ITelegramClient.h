@@ -25,6 +25,13 @@ struct ITelegramClient {
         auto object = co_await sendQuery(std::move(f));
         if (object->get_id() == td::td_api::error::ID) {
             auto error = td::move_tl_object_as<td::td_api::error>(std::move(object));
+            if (AStringView(error->message_).contains("FROZEN_METHOD_INVALID")) {
+                // this error occurs when the userbot was reported by schoolkids and therefore suspended (banned).
+                // we'll crash the application immediately to prevent failed API calls.
+                // get a tg premium subscription to minimize risks of doxx.о
+                ALogger::err("ITelegramClient") << "The userbot's account was suspended - can't operate";
+                std::terminate();
+            }
             throw AException(error->message_);
         }
         if constexpr (requires { F::ReturnType::element_type::ID; }) {

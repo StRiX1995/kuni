@@ -5,6 +5,7 @@
 #include "post_message.h"
 
 #include "config.h"
+#include "is_accessible_from_lockdown.h"
 #include "AUI/Image/jpg/JpgImageLoader.h"
 
 static constexpr auto LOG_TAG = "util::post_message";
@@ -15,12 +16,10 @@ AFuture<> util::telegramPostMessage(
         << "telegramPostMessage: chat_id" << chatId << " text=" << text << " photo=" << photo
         << " audioPath=" << audioPath << " replyTo=" << replyTo;
     // Check lockdown mode - only allow PAPIK_CHAT_ID if lockdown is enabled
-    if constexpr (config::LOCKDOWN_MODE) {
-        if (chatId != config::PAPIK_CHAT_ID) {
-            ALogger::err(LOG_TAG) << "Lockdown mode is enabled. You can only send messages to chat with ID {} (PAPIK_CHAT_ID)."_format(
-                config::PAPIK_CHAT_ID);
-            co_return;
-        }
+    if (! co_await util::isAccessibleFromLockdown(telegram, chatId)) {
+        ALogger::err(LOG_TAG) << "Lockdown mode is enabled. You can only send messages to chat with ID {} (PAPIK_CHAT_ID)."_format(
+            config::PAPIK_CHAT_ID);
+        co_return;
     }
 
     co_await telegram.sendQueryWithResult([&] {

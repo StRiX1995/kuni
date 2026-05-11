@@ -36,6 +36,7 @@
 #include "tools/remove_and_ban_chat.h"
 #include "tools/send_telegram_message.h"
 #include "ui/debug/KuniDebugWindow.h"
+#include "util/is_accessible_from_lockdown.h"
 #include "util/populate_from_diary_ai_if_needed.h"
 #include "util/post_message.h"
 
@@ -98,13 +99,12 @@ namespace {
                     auto chatId = ctx.args["chat_id"].asLongIntOpt().valueOrException("chat_id integer is required");
                     
                     // Check lockdown mode - only allow PAPIK_CHAT_ID if lockdown is enabled
-                    if constexpr (config::LOCKDOWN_MODE) {
-                        if (chatId != config::PAPIK_CHAT_ID) {
-                            ALogger::err(LOG_TAG) << "Error: Lockdown mode is enabled. You can only open chat with ID {} (PAPIK_CHAT_ID)."_format(config::PAPIK_CHAT_ID);
-                            co_return "No such chat";
-                        }
+
+                    if (! co_await util::isAccessibleFromLockdown(*telegram(), chatId)) {
+                        ALogger::err(LOG_TAG) << "Error: Lockdown mode is enabled. You can only open chat with ID {} (PAPIK_CHAT_ID)."_format(config::PAPIK_CHAT_ID);
+                        co_return "No such chat";
                     }
-                    
+
                     co_return co_await llmuiOpenTelegramChat(ctx.tools, chatId);
                 },
             });
@@ -177,12 +177,10 @@ namespace {
                 td::td_api::make_object<td::td_api::getChat>(u.message_->chat_id_));
             
             // Check lockdown mode - only allow PAPIK_CHAT_ID if lockdown is enabled
-            if constexpr (config::LOCKDOWN_MODE) {
-                if (chat->id_ != config::PAPIK_CHAT_ID) {
-                    co_return;
-                }
+            if (! co_await util::isAccessibleFromLockdown(*telegram(), chat->id_)) {
+                co_return;
             }
-            
+
             if (chat->notification_settings_) {
                 if (chat->notification_settings_->mute_for_ > 0) {
                     // Alex2772 (Apr 23 2026):
@@ -251,11 +249,9 @@ namespace {
 
         AFuture<AString> llmuiOpenTelegramChat(OpenAITools& tools, int64_t chatId) {
             // Check lockdown mode - only allow PAPIK_CHAT_ID if lockdown is enabled
-            if constexpr (config::LOCKDOWN_MODE) {
-                if (chatId != config::PAPIK_CHAT_ID) {
-                    ALogger::err(LOG_TAG) << "Error: Lockdown mode is enabled. You can only open chat with ID {} (PAPIK_CHAT_ID)."_format(config::PAPIK_CHAT_ID);
-                    co_return "No such chat";
-                }
+            if (! co_await util::isAccessibleFromLockdown(*telegram(), chatId)) {
+                ALogger::err(LOG_TAG) << "Error: Lockdown mode is enabled. You can only open chat with ID {} (PAPIK_CHAT_ID)."_format(config::PAPIK_CHAT_ID);
+                co_return "No such chat";
             }
             
             co_await telegram()->waitForConnection();
