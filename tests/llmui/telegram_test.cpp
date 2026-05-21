@@ -325,7 +325,7 @@ TEST(TelegramTest, ExtractMessageTypeAndText_Call) {
     call.is_video_ = false;
 
     auto result = llmui::extractMessageTypeAndText(*msg);
-    EXPECT_EQ(result, "[call] voice call");
+    EXPECT_EQ(result, "<call is_video=\"false\" duration=\"0\" />");
 }
 
 // ===========================================================================
@@ -339,7 +339,7 @@ TEST(TelegramTest, ExtractMessageTypeAndText_VideoCall) {
     call.is_video_ = true;
 
     auto result = llmui::extractMessageTypeAndText(*msg);
-    EXPECT_EQ(result, "[call] video call");
+    EXPECT_EQ(result, "<call is_video=\"true\" duration=\"0\" />");
 }
 
 // ===========================================================================
