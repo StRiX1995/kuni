@@ -9,6 +9,7 @@
 #include "AUI/Util/kAUI.h"
 
 static constexpr auto LOG_TAG = "llmui::image";
+static constexpr size_t MAX_CAPTION_CONTEXT_CHARS = 6000;
 
 AFuture<AString> llmui::image(std::span<const IOpenAIChat::Message> temporaryContext, IOpenAIChat& openAI, AStringView pathToImage, AStringView xmlTag) {
     static const APath CACHE_DIR = APath("cache") / "images";
@@ -25,9 +26,23 @@ AFuture<AString> llmui::image(std::span<const IOpenAIChat::Message> temporaryCon
 
         AString context = "<context>\n";
         context += "<character name=\"Kuni\">\n";
-        context += kuni_character::getAppearancePrompt();
+        context += Kuni_character::getAppearancePrompt();
         context += "\n</character name=\"Kuni\">\n";
-        for (const auto& i : temporaryContext) {
+        // The main agent can have a 40k-token context, while the local vision model is commonly
+        // loaded with an 8k context. Only pass the newest complete context items that fit into a
+        // conservative character budget. Image captioning does not need the whole agent history.
+        size_t contextStart = temporaryContext.size();
+        size_t contextChars = 0;
+        while (contextStart > 0) {
+            const auto itemChars = temporaryContext[contextStart - 1].content.length();
+            if (contextChars + itemChars > MAX_CAPTION_CONTEXT_CHARS) {
+                break;
+            }
+            contextChars += itemChars;
+            --contextStart;
+        }
+        for (size_t index = contextStart; index < temporaryContext.size(); ++index) {
+            const auto& i = temporaryContext[index];
             context += "<context_item>\n";
             context += i.content;
             context += "\n</context_item>\n";

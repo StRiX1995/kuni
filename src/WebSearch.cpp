@@ -23,6 +23,18 @@ AJSON_FIELDS(web::Result,
 
 AFuture<AVector<web::Result>> web::search(AString query, int maxResults) {
     ALOG_TRACE(LOG_TAG) << "web::search: " << query;
+    auto secrets = util::secrets();
+    if (!secrets.contains("ollama")) {
+        ALogger::warn(LOG_TAG) << "Web search is disabled: [ollama].bearer_key is not configured";
+        co_return AVector<web::Result>{};
+    }
+    auto& ollama = secrets["ollama"];
+    if (!ollama.contains("bearer_key") || !ollama["bearer_key"].is_string() || ollama["bearer_key"].as_string().empty()) {
+        ALogger::warn(LOG_TAG) << "Web search is disabled: [ollama].bearer_key is not configured";
+        co_return AVector<web::Result>{};
+    }
+    const auto bearerKey = ollama["bearer_key"].as_string();
+
     // Build JSON body
     AJson body = AJson::Object{{"query", std::move(query)} };
     if (maxResults> 0) {
@@ -30,7 +42,7 @@ AFuture<AVector<web::Result>> web::search(AString query, int maxResults) {
     }
     AVector<AString> headers = {
         "Content-Type: application/json",
-        "Authorization: Bearer {}"_format(util::secrets()["ollama"]["bearer_key"].as_string()),
+        "Authorization: Bearer {}"_format(bearerKey),
     };
     auto response = AJson::fromBuffer((co_await ACurl::Builder("https://ollama.com/api/web_search")
                                            .withMethod(ACurl::Method::HTTP_POST)

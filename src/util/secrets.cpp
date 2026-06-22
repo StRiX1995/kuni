@@ -7,7 +7,7 @@
 
 static constexpr auto LOG_TAG = "secrets";
 static constexpr auto TEMPLATE = R"(
-# SECRETS file, kuni project, https://github.com/alex2772/kuni/
+# SECRETS file, Kuni project, https://github.com/alex2772/Kuni/
 # WARNING - SENSITIVE DATA! DO NOT SHARE NOR COMMIT THIS FILE!!!
 
 [telegram_api]
@@ -15,6 +15,32 @@ static constexpr auto TEMPLATE = R"(
 # https://core.telegram.org/api/obtaining_api_id
 id = 0
 hash = ""
+
+[telegram_proxy]
+# Optional MTProxy used by TDLib. Values can be copied from a
+# tg://proxy?server=...&port=...&secret=... link.
+enabled = false
+server = ""
+port = 443
+secret = ""
+
+[openai_compatible]
+# Optional external OpenAI-compatible chat provider.
+enabled = false
+base_url = "https://example.com/v1/"
+model = ""
+auth_key = ""
+
+[comfyui]
+# Optional ComfyUI API-format workflow adapter.
+enabled = false
+base_url = "http://localhost:7860/"
+workflow_path = ""
+positive_node = "39:0"
+negative_node = "39:1"
+sampler_node = "11"
+size_switch_node = "261"
+output_node = "248"
 
 [ollama]
 # uncomment and specify this if you want Ollama web search
@@ -69,4 +95,35 @@ toml::basic_value<toml::type_config> util::secrets() {
         }
     }();
     return data;
+}
+
+EndpointAndModel util::openAICompatibleEndpoint(EndpointAndModel fallback) {
+    auto data = secrets();
+    if (!data.contains("openai_compatible")) {
+        return fallback;
+    }
+
+    auto& config = data["openai_compatible"];
+    if (!config.contains("enabled") || !config["enabled"].as_boolean()) {
+        return fallback;
+    }
+
+    const auto baseUrl = config["base_url"].as_string();
+    const auto model = config["model"].as_string();
+    const auto authKey = config["auth_key"].as_string();
+    if (baseUrl.empty() || model.empty()) {
+        throw AException("[openai_compatible].base_url and model must be populated in data/secrets.toml");
+    }
+
+    auto normalizedBaseUrl = AString(baseUrl);
+    if (!normalizedBaseUrl.endsWith('/')) {
+        normalizedBaseUrl += '/';
+    }
+    return {
+        .endpoint = {
+            .baseUrl = std::move(normalizedBaseUrl),
+            .bearerKey = authKey,
+        },
+        .model = model,
+    };
 }

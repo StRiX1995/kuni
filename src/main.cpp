@@ -368,7 +368,7 @@ public:
                 });
             if (senderId == mTelegram->myId()) {
                 // last message is from Kuni.
-                return "kuni proactive";
+                return "Kuni proactive";
             }
             return "reply to user";
         }());
@@ -421,7 +421,7 @@ public:
                     // not sure if this is needed; i think LLM would be confused if <message> tag exists in both
                     // diary and current chat listing.
                     //
-                    // currently disabled because it pollutes diary very quickly and according to kuni --debug,
+                    // currently disabled because it pollutes diary very quickly and according to Kuni --debug,
                     // its hard to find something meaningful; instead you get a bunch of messages
                     //
                     // auto msgReformatted = msgFormatted

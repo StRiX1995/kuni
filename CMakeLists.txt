@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(kuni
+project(Kuni
         VERSION 0.0.2 # CI_PROJECT_VERSION
     )
 
@@ -79,3 +79,9 @@ aui_app(TARGET ${PROJECT_NAME}
         VENDOR "Alex2772"
         ICON "assets/img/icon.svg"
 )
+
+# The service performs the initial TDLib authorization through stdin and
+# writes its status to the console. Keep a console attached on Windows.
+if(WIN32)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY WIN32_EXECUTABLE FALSE)
+endif()

@@ -1,0 +1,32 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "msys2-ucrt64-debug",
+      "displayName": "MSYS2 UCRT64 Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/msys2-ucrt64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe",
+        "CMAKE_C_FLAGS": "-std=gnu17",
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/g++.exe",
+        "CMAKE_CXX_FLAGS": "-Wno-error=unused-but-set-variable -Wa,-mbig-obj",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe",
+        "CMAKE_PREFIX_PATH": "C:/msys64/ucrt64"
+      },
+      "environment": {
+        "PATH": "C:/msys64/ucrt64/bin;C:/msys64/usr/bin;$penv{PATH}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msys2-ucrt64-debug",
+      "configurePreset": "msys2-ucrt64-debug",
+      "targets": [
+        "Kuni"
+      ]
+    }
+  ]
+}

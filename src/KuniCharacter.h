@@ -1,7 +1,7 @@
 #pragma once
 #include "AUI/Common/AString.h"
 
-namespace kuni_character
+namespace Kuni_character
 {
     AString getBasePrompt();
     AString getAppearancePrompt();

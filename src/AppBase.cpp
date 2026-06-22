@@ -535,7 +535,7 @@ AString AppBase::takeDiaryEntry(const Diary::EntryExAndRelatedness& i) {
 
 AString AppBase::getSystemPrompt()
 {
-    auto prompt = "{}\n\n<your_appearance>\n{}\n</your_appearance>"_format(kuni_character::getBasePrompt(), kuni_character::getAppearancePrompt());
+    auto prompt = "{}\n\n<your_appearance>\n{}\n</your_appearance>"_format(Kuni_character::getBasePrompt(), Kuni_character::getAppearancePrompt());
     if (config::LOCKDOWN_MODE != config::LockdownMode::NONE) {
         prompt += "\nYou are currently under lockdown mode. This means you can access to subset of chats only.";
     }

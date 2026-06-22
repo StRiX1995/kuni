@@ -2,10 +2,11 @@
 #include <chrono>
 
 #include "Endpoint.h"
+#include "util/secrets.h"
 
 namespace config {
     static constexpr bool CAPABILITY_TAKE_PHOTO = true;
-    static constexpr bool CAPABILITY_RECORD_AUDIO = true;
+    static constexpr bool CAPABILITY_RECORD_AUDIO = false;
     static constexpr bool CAPABILITY_USE_STICKERS = true;
 
     static constexpr bool SHOULD_BEGIN_DIALOGS = true;
@@ -15,7 +16,7 @@ namespace config {
     // Every time the AI calls #send_telegram_message, it will be reminded that it can generate images and voice notes.
     // This will happen with TOOL_REMINDER_CHANCE * 100%. E.g. 0.1f -> 10% chance every time a message is sent, 0f for no reminders at all.
     // If a CAPABILITY (refer to config:7-8) is off, it will be skipped for the reminder, of course.
-    static constexpr float TOOL_REMINDER_CHANCE = 0.1f;
+    static constexpr float TOOL_REMINDER_CHANCE = 0.0f;
 
     static constexpr auto SYSTEM_PROMPT = R"(
 Follow the user's requirements carefully & to the letter.
@@ -92,7 +93,7 @@ other, through you still are not obligated to reply to each message.
 
 Group chats have several participants. In most cases, you just read messages, learn from them
 and that's it. You don't usually respond to messages in group chats unless you have a relevant commentary or you was
-specifically mentioned by `@kunii_chan` tag. @kunii_chan is your nickname in Telegram.
+specifically mentioned by `@kumi_ai` tag. @kumi_ai is your nickname in Telegram.
 
 ## Channels
 
@@ -407,10 +408,15 @@ world) in the following format:
 
 </outputFormatting>
 )";
-
-    static const EndpointAndModel ENDPOINT_MAIN {
+// curl http://127.0.0.1:1234/v1/embeddings \
+//   -H "Content-Type: application/json" \
+//   -d '{
+//     "model": "text-embedding-qwen3-embedding-0.6b",
+//     "input": "Some text to embed"
+// }'
+    static const EndpointAndModel ENDPOINT_MAIN = util::openAICompatibleEndpoint({
         .endpoint = {
-            .baseUrl = "http://localhost:11434/v1/",
+            .baseUrl = "http://homelab:1234/v1/",
             // .baseUrl = "https://openrouter.ai/api/v1/",
             // .bearerKey = secrets::OPENROUTER_BEARER_KEY,
         },
@@ -423,11 +429,11 @@ world) in the following format:
         // .model = "lfm2"; // не может вызвать тулы
         .model = "qwen3.5:9b", // более общительная и легкомысленная. реасонинг всё равно говно
         // .model = "magistral:latest"; // не вызывает тулы
-    };
+    });
 
     static const EndpointAndModel ENDPOINT_PHOTO_TO_TEXT {
         .endpoint = {
-            .baseUrl = "http://localhost:11434/v1/",
+            .baseUrl = "http://homelab:1234/v1/",
         },
         .model = "qwen3.5:9b",
     };
@@ -449,14 +455,14 @@ world) in the following format:
 
     static const EndpointAndModel ENDPOINT_CHEAP_LLM {
         .endpoint = {
-            .baseUrl = "http://localhost:11434/v1/",
+            .baseUrl = "http://homelab:1234/v1/",
         },
         .model = "qwen3.5:9b",
     };
 
     static const EndpointAndModel ENDPOINT_EMBEDDING {
         .endpoint = {
-            .baseUrl = "http://localhost:11434/v1/",
+            .baseUrl = "http://homelab:1234/v1/",
         },
         .model = "qwen3-embedding",
     };
@@ -466,7 +472,7 @@ world) in the following format:
         .baseUrl = "http://localhost:7860/",
     };
 
-    static constexpr auto PAPIK_CHAT_ID = 625207005;
+    static constexpr auto PAPIK_CHAT_ID = 947424517;
 
     enum class LockdownMode {
         NONE, // public
@@ -474,7 +480,7 @@ world) in the following format:
         PAPIK_ONLY,
     };
     
-    static constexpr LockdownMode LOCKDOWN_MODE = LockdownMode::PAPIK_ONLY;
+    static constexpr LockdownMode LOCKDOWN_MODE = LockdownMode::NONE;
 
     static constexpr auto DIARY_TOKEN_COUNT_TRIGGER = 40000;
     static constexpr auto DIARY_AVERAGE_ENTRY_SIZE = 1000;
@@ -500,8 +506,10 @@ world) in the following format:
     static const AOptional<double> PRESENCE_PENALTY = std::nullopt; // qwen3.5:9b: 1.5
     static const AOptional<double> REPETITION_PENALTY = std::nullopt; // qwen3.5:9b: 1.05
 
-    static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 0.90f; // lower is stricter
-    static constexpr auto REPEAT_YOURSELF_TRIGGER_MAX = REPEAT_YOURSELF_TRIGGER_AVG * 0.95f; // lower is stricter
+    // static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 0.90f; // lower is stricter
+    // static constexpr auto REPEAT_YOURSELF_TRIGGER_MAX = REPEAT_YOURSELF_TRIGGER_AVG * 0.95f; // lower is stricter
+    static constexpr auto REPEAT_YOURSELF_TRIGGER_AVG = 1.0f; // lower is stricter
+    static constexpr auto REPEAT_YOURSELF_TRIGGER_MAX = REPEAT_YOURSELF_TRIGGER_AVG * 2.0f; // lower is stricter
     static constexpr auto REPEAT_YOURSELF_MAX_HISTORY = 32;
 
     static constexpr auto REQUEST_TIMEOUT = std::chrono::minutes(10);

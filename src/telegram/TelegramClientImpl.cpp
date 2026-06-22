@@ -45,6 +45,26 @@ void TelegramClientImpl::initClientManager() {
     ALOG_TRACE(LOG_TAG) << "initClientManager";
     mClientManager = std::make_unique<td::ClientManager>();
     mClientId = mClientManager->create_client_id();
+
+    auto secrets = util::secrets();
+    if (secrets.contains("telegram_proxy")) {
+        auto& proxyConfig = secrets["telegram_proxy"];
+        const bool enabled = proxyConfig.contains("enabled") && proxyConfig["enabled"].as_boolean();
+        if (enabled) {
+            const auto server = proxyConfig["server"].as_string();
+            const auto port = proxyConfig["port"].as_integer();
+            const auto secret = proxyConfig["secret"].as_string();
+            if (server.empty() || secret.empty() || port <= 0 || port > 65535) {
+                throw AException("Invalid [telegram_proxy] configuration in data/secrets.toml");
+            }
+
+            ALogger::info(LOG_TAG) << "Enabling MTProxy " << server << ":" << port;
+            auto proxyType = td::td_api::make_object<td::td_api::proxyTypeMtproto>(secret);
+            auto proxy = td::td_api::make_object<td::td_api::proxy>(server, static_cast<std::int32_t>(port), std::move(proxyType));
+            sendQueryWithResult(td::td_api::make_object<td::td_api::addProxy>(std::move(proxy), true));
+        }
+    }
+
     sendQueryWithResult(td::td_api::make_object<td::td_api::getOption>("version"))
         .onSuccess([](const td::td_api::object_ptr<td::td_api::OptionValue>& object) {
             td::td_api::downcast_call(*const_cast<td::td_api::object_ptr<td::td_api::OptionValue>&>(object),
@@ -135,7 +155,7 @@ void TelegramClientImpl::commonHandler(td::tl::unique_ptr<td::td_api::Object> ob
                             ALogger::info(LOG_TAG) << "[Authentication] required. Please supply phone number to stdin";
 
                             auto params = td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>();
-                            std::cin >> params->phone_number_;
+                            std::getline(std::cin >> std::ws, params->phone_number_);
                             sendQuery(std::move(params));
                         },
                         [this](td::td_api::authorizationStateWaitPassword& s) {
@@ -143,7 +163,7 @@ void TelegramClientImpl::commonHandler(td::tl::unique_ptr<td::td_api::Object> ob
                                                       "password to stdin";
 
                             auto params = td::td_api::make_object<td::td_api::checkAuthenticationPassword>();
-                            std::cin >> params->password_;
+                            std::getline(std::cin >> std::ws, params->password_);
                             sendQuery(std::move(params));
                         },
                         [this](td::td_api::authorizationStateWaitCode& s) {
@@ -151,7 +171,7 @@ void TelegramClientImpl::commonHandler(td::tl::unique_ptr<td::td_api::Object> ob
                                                       "verification code to stdin";
 
                             auto params = td::td_api::make_object<td::td_api::checkAuthenticationCode>();
-                            std::cin >> params->code_;
+                            std::getline(std::cin >> std::ws, params->code_);
                             sendQuery(std::move(params));
                         },
                         [this](td::td_api::authorizationStateClosed& u) {

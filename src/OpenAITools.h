@@ -27,7 +27,10 @@ struct OpenAITools {
             AVector<AString> required; // required properties
             bool additionalProperties = false;
         } parameters;
-        bool strict = true;
+        // Most Kuni tools have genuinely optional or mutually exclusive fields.
+        // OpenAI strict mode requires every property to be listed in required,
+        // so these schemas must use regular (non-strict) function calling.
+        bool strict = false;
         Handler handler;
     };
 

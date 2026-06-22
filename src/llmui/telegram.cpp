@@ -471,9 +471,21 @@ AFuture<AString> llmui::formatChatHistoryMessage(
             if constexpr (config::CAPABILITY_USE_STICKERS) {
                 xmlTag += " sticker_id=\"{}\""_format(sticker.sticker_->id_);
             }
-            if (sticker.sticker_->sticker_) {
+            if (sticker.sticker_->format_ &&
+                sticker.sticker_->format_->get_id() == td::td_api::stickerFormatWebp::ID &&
+                sticker.sticker_->sticker_) {
                 result += co_await llmui::image(
                     temporaryContext, openAI, co_await fetchMedia(telegram, sticker.sticker_->sticker_), xmlTag);
+            } else if (sticker.sticker_->thumbnail_ && sticker.sticker_->thumbnail_->file_) {
+                // TGS and WebM aren't still images. Caption their static Telegram thumbnail instead
+                // of passing the animation payload to the image decoder.
+                result += co_await llmui::image(
+                    temporaryContext,
+                    openAI,
+                    co_await fetchMedia(telegram, sticker.sticker_->thumbnail_->file_),
+                    xmlTag);
+            } else {
+                result += "<{} description>\nAnimated sticker preview is unavailable\n</{}>"_format(xmlTag, xmlTag);
             }
             const auto id = sticker.sticker_->id_;
             tools::stickers::knownStickers()[id] = std::move(sticker.sticker_);
@@ -493,8 +505,21 @@ AFuture<AString> llmui::formatChatHistoryMessage(
                     xmlTag += " emoji=\"{}\""_format(gift.gift_->sticker_->emoji_);
                 }
 
-                result += co_await llmui::image(
-                    temporaryContext, openAI, co_await fetchMedia(telegram, gift.gift_->sticker_->sticker_), xmlTag);
+                auto& giftSticker = gift.gift_->sticker_;
+                if (giftSticker->format_ &&
+                    giftSticker->format_->get_id() == td::td_api::stickerFormatWebp::ID &&
+                    giftSticker->sticker_) {
+                    result += co_await llmui::image(
+                        temporaryContext, openAI, co_await fetchMedia(telegram, giftSticker->sticker_), xmlTag);
+                } else if (giftSticker->thumbnail_ && giftSticker->thumbnail_->file_) {
+                    result += co_await llmui::image(
+                        temporaryContext,
+                        openAI,
+                        co_await fetchMedia(telegram, giftSticker->thumbnail_->file_),
+                        xmlTag);
+                } else {
+                    result += "<{} description>\nAnimated sticker preview is unavailable\n</{}>"_format(xmlTag, xmlTag);
+                }
             } else {
                 result += "<{} />"_format(xmlTag);
             }

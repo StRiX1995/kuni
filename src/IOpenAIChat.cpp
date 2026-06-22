@@ -4,6 +4,37 @@
 
 #include "IOpenAIChat.h"
 
+#include <algorithm>
+
+namespace {
+AJson toOpenAIMessageJson(const IOpenAIChat::Message& message) {
+    auto json = aui::to_json(message);
+    auto& object = json.asObject();
+    auto eraseField = [&](AStringView key) {
+        std::erase_if(object, [&](const auto& entry) { return entry.first == key; });
+    };
+
+    if (message.tool_calls.empty()) {
+        eraseField("tool_calls");
+    } else {
+        for (auto& toolCall : json["tool_calls"].asArray()) {
+            auto& toolCallObject = toolCall.asObject();
+            std::erase_if(toolCallObject, [](const auto& entry) { return entry.first == "index"; });
+        }
+    }
+    if (message.tool_call_id.empty()) {
+        eraseField("tool_call_id");
+    }
+    if (message.reasoning.empty()) {
+        eraseField("reasoning");
+    }
+    if (message.reasoning_content.empty()) {
+        eraseField("reasoning_content");
+    }
+    return json;
+}
+}
+
 AJson AJsonConv<AVector<IOpenAIChat::Message>>::toJson(const AVector<IOpenAIChat::Message>& v) {
     AJson::Array result;
     for (const auto& message: v) {
@@ -14,7 +45,7 @@ AJson AJsonConv<AVector<IOpenAIChat::Message>>::toJson(const AVector<IOpenAIChat
                 if (msg.content.empty()) {
                     return;
                 }
-                result << aui::to_json(msg);
+                result << toOpenAIMessageJson(msg);
             };
             for (;;) {
                 auto tagPos = content.find("<{}>"_format(IOpenAIChat::EMBEDDING_TAG));
@@ -36,7 +67,10 @@ AJson AJsonConv<AVector<IOpenAIChat::Message>>::toJson(const AVector<IOpenAIChat
                     {"role", aui::to_json(message.role)},
                     {"content",
                      AJson::Array{
-                         AJson::Object{{"type", "image_url"}, {"image_url", body}},
+                         AJson::Object{
+                             {"type", "image_url"},
+                             {"image_url", AJson::Object{{"url", body}}},
+                         },
                      }},
                 };
                 append(IOpenAIChat::Message{
@@ -48,7 +82,7 @@ AJson AJsonConv<AVector<IOpenAIChat::Message>>::toJson(const AVector<IOpenAIChat
             }
             continue;
         }
-        result << aui::to_json(message);
+        result << toOpenAIMessageJson(message);
     }
     return result;
 }

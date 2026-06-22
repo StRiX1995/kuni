@@ -110,8 +110,10 @@ AFuture<IOpenAIChat::Response> OpenAIChatImpl::chat(Params params, AVector<Messa
     AFileOutputStream("last_query.json") << query.toStdString();
     const auto logsDir = APath("logs");
     logsDir.makeDirs();
-    auto now = std::chrono::system_clock::now();
-    AFileOutputStream(logsDir / "{}.0query.json"_format(now)) << query.toStdString();
+    const auto logId = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+    AFileOutputStream(logsDir / "{}.0query.json"_format(logId)) << query.toStdString();
 
     ALOG_TRACE(LOG_TAG) << "Query: " << query;
     AVector<AString> headers = {"Content-Type: application/json"};
@@ -139,7 +141,7 @@ AFuture<IOpenAIChat::Response> OpenAIChatImpl::chat(Params params, AVector<Messa
         throw AException("Ollama error: " + message);
     }
     AFileOutputStream("last_response.json") << response;
-    AFileOutputStream(logsDir / "{}.1response.json"_format(now)) << response;
+    AFileOutputStream(logsDir / "{}.1response.json"_format(logId)) << response;
     ALOG_DEBUG(LOG_TAG) << "Response: " << AJson::toString(response).replaceAll("\\n", "\n");
     auto responseResult = aui::from_json<Response>(response);
     // if (!responseResult.choices.empty() && !ALogger::global().isTrace()) {
@@ -157,8 +159,10 @@ _<IOpenAIChat::StreamingResponse> OpenAIChatImpl::chatStreaming(Params params, A
     AFileOutputStream("last_query.json") << query.toStdString();
     const auto logsDir = APath("logs");
     logsDir.makeDirs();
-    auto now = std::chrono::system_clock::now();
-    AFileOutputStream(logsDir / "{}.0query.json"_format(now)) << query.toStdString();
+    const auto logId = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+    AFileOutputStream(logsDir / "{}.0query.json"_format(logId)) << query.toStdString();
 
     ALOG_TRACE(LOG_TAG) << "QueryStreaming: " << query;
     AVector<AString> headers = {"Content-Type: application/json"};

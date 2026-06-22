@@ -2,8 +2,7 @@
 #include "IStableDiffusionClient.h"
 
 /**
- * @brief Concrete implementation of IStableDiffusionClient that communicates
- *        with a Stable Diffusion WebUI API endpoint.
+ * @brief Stable Diffusion client supporting ComfyUI workflow API and the legacy WebUI API.
  */
 struct StableDiffusionClientImpl: IStableDiffusionClient {
     Endpoint endpoint = config::ENDPOINT_SD;

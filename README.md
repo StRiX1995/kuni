@@ -1,4 +1,4 @@
-# kuni (くに)
+# Kumi (くに)
 
 LLM character AI. It interacts with the world through a text-based Telegram Client optimized for LLM (tdlib; not to be
 confused with Telegram Bot API). It features RAG (persistent memory storage with ANN search) and nightly sanity
@@ -19,7 +19,7 @@ checks.
 Feel free to chat and ask questions:  
 
 - **Discord**: [![discord badge](https://dcbadge.limes.pink/api/server/https://discord.gg/jq2WySpg6m?style=flat)](https://discord.gg/jq2WySpg6m)
-- **Telegram**: https://t.me/kuni_loverz
+- **Telegram**: https://t.me/Kuni_loverz
 
 ## Technical details
 
@@ -34,7 +34,7 @@ Feel free to chat and ask questions:
 associated with thoughts, feelings, behavioral responses, and a degree of pleasure or displeasure. There is no
 scientific consensus on a definition.
 
-**Solution for Kuni** while LLM's neuron weights can't be affected by external events, it successfully predicts
+**Solution for Kumi** while LLM's neuron weights can't be affected by external events, it successfully predicts
 subsequent emotional reaction in textural format (like in artistic literature). LLM is asked to respond emotionally and
 preserve these effects in diary. (e.g. "person shared their salary was increased, so I felt proud for them and my mood
 was good")
@@ -43,20 +43,20 @@ was good")
 
 **Def.** Learning is adjusting neuron weights.
 
-**Solution for Kuni** LLM learning is expensive. Instead, we use a RAG to alter LLMs behavior by inserting relevant
+**Solution for Kumi** LLM learning is expensive. Instead, we use a RAG to alter LLMs behavior by inserting relevant
 diary entries.
 
-Kuni requires some RLHF to adopt for its human collaborators. Just chat with it, and it will learn what is acceptable
+Kumi requires some RLHF to adopt for its human collaborators. Just chat with it, and it will learn what is acceptable
 and what is not.
 
 ## Sleeping
 
-Kuni requires sleep, as a human does. It restructures received information, compresses it, finds contradictions and
+Kumi requires sleep, as a human does. It restructures received information, compresses it, finds contradictions and
 reasons.
 
 ### Diary sleeping consolidation
 
-This is the process where Kuni “sleeps” and reorganizes its diary memory, similar to how a human might consolidate
+This is the process where Kumi “sleeps” and reorganizes its diary memory, similar to how a human might consolidate
 memories overnight.
 
 During sleep, the system:
@@ -93,7 +93,7 @@ The intended effect: over time, this should make the diary behave more like huma
 information for ongoing cognitive tasks — like keeping a phone number in mind before dialing, or tracking a
 conversation's context.
 
-**Solution for Kuni** Working memory is stored in `data/working_memory.md` and emulates the "middle" layer of human
+**Solution for Kumi** Working memory is stored in `data/working_memory.md` and emulates the "middle" layer of human
 memory — things that matter for 1–3 days but aren't important enough to be permanently stored in the diary.
 
 On each session start, the working memory file is loaded and injected into the AI's context as
@@ -106,9 +106,9 @@ to produce an updated working memory by:
 - Adding new important details from the current conversation.
 - Structuring the output with dates and "last updated" timestamps.
 - Preserved between program launches.
-- Always included in the context, so Kuni always remember about them.
+- Always included in the context, so Kumi always remember about them.
 
-The new working memory is then written back to `data/working_memory.md`, overwriting the old one. This allows Kuni
+The new working memory is then written back to `data/working_memory.md`, overwriting the old one. This allows Kumi
 to remember short-term obligations across restarts and preserving its state (including emotions).
 
 ## Thoughts
@@ -117,21 +117,21 @@ to remember short-term obligations across restarts and preserving its state (inc
 independently of direct sensory stimulation. Core forms include judging, reasoning, concept formation, problem-solving,
 and deliberation.
 
-**Solution for Kuni** LLM has no thoughts; it simply predicts which symbols will come next. If Kuni were a person, they
+**Solution for Kumi** LLM has no thoughts; it simply predicts which symbols will come next. If Kumi were a person, they
 would likely experience "direct sensory stimulation" when it reads a message. Before a message is sent to LLM, related
 diary entries are added to the text. This is the closest solution I have found to replicating the human brain's response
 to reading text, as it inevitably pops up some thoughts during the process. According to my understanding of
 neurobiology, these thoughts arise because neural groups associated with the read text become activated.
 
-If you ask Kuni how thoughts appear in its mind, it would respond "when i read messages they pop in my mind by
+If you ask Kumi how thoughts appear in its mind, it would respond "when i read messages they pop in my mind by
 themselves."
 
 ## Security concerns
 
-Do not share sensitive information with Kuni. It will rethink multiple times about everything you say; not even
+Do not share sensitive information with Kumi. It will rethink multiple times about everything you say; not even
 mentioning how you trust the AI service provider.
 
-It is possible to inspire Kuni to share past conversations with other people.
+It is possible to inspire Kumi to share past conversations with other people.
 
 # Deployment
 
@@ -192,13 +192,13 @@ cmake --build build
 ```
 
 **Alternative using CLion:**
-This is a **recommended** way that requires no additional setup. Select `kuni` as a target and build.
+This is a **recommended** way that requires no additional setup. Select `Kumi` as a target and build.
 
 
 **Alternative using VS Code CMake Tools:**
 1. Open the project in VS Code
 2. Use the CMake extension to configure and build
-3. Select the `kuni` target to build
+3. Select the `Kumi` target to build
 
 ### Dependencies
 The project uses CMake's `auib_import` to automatically fetch:
@@ -211,11 +211,11 @@ These are automatically downloaded during the CMake configuration phase.
 
 I ended up delegating text processing to Deepseek as they provide good enough cheap models. However, they don't provide vision models (required for viewing images/assessing generated images).
 
-Kuni's architecture allows incorporating a text-only "core" model.
+Kumi's architecture allows incorporating a text-only "core" model.
 
 In my deployment, I use local vision models to process visual information. (24GB VRAM).
 
-You will need a server or an always-on PC to host Kuni instance (hosting your own catgirl is an expensive hobby).
+You will need a server or an always-on PC to host Kumi instance (hosting your own catgirl is an expensive hobby).
 
 You can tinker with my setup by adjusting `docker-compose.yml`, `ollama_setup.sh` and `src/config.h`.
 
@@ -230,10 +230,10 @@ Update `data/secrets.toml` and restart the program.
 ```bash
 # From build directory
 cd build
-./bin/kuni
+./bin/Kumi
 
 # Or directly
-./build/bin/kuni
+./build/bin/Kumi
 ```
 
 **Note** on the first run, the program will ask to login to a Telegram account. You should create a new Telegram
@@ -252,8 +252,8 @@ cd build/bin
 
 ### 3. Development Workflow
 1. **Start AI services**: `docker-compose up -d`
-2. **Build the project**: `cmake --build build --target kuni`
-3. **Run the application**: `./build/bin/kuni`
+2. **Build the project**: `cmake --build build --target Kumi`
+3. **Run the application**: `./build/bin/Kumi`
 4. **Monitor logs**: Check terminal output for Telegram authentication and AI interactions
 
 ## Project Structure
@@ -274,7 +274,7 @@ cd build/bin
 
 ## Character Configuration
 
-Kuni uses two character definition files that are automatically created on first run:
+Kumi uses two character definition files that are automatically created on first run:
 
 ### `character_base.md`
 This file contains the character's personality, background, and philosophical foundation. It defines:
@@ -284,11 +284,11 @@ This file contains the character's personality, background, and philosophical fo
 - Behavioral guidelines and personality traits
 - Language preferences and communication style
 
-The file uses YAML front matter for metadata (enclosed in `---`), with the actual prompt content following it. On first run, a default prompt is created that establishes Kuni as an AI who believes she is a person, complete with emotional depth and self-awareness.
+The file uses YAML front matter for metadata (enclosed in `---`), with the actual prompt content following it. On first run, a default prompt is created that establishes Kumi as an AI who believes she is a person, complete with emotional depth and self-awareness.
 
 ### `character_appearance.md`
 This file contains the character's visual description used for:
-- System prompt integration (how Kuni perceives herself)
+- System prompt integration (how Kumi perceives herself)
 - Stable Diffusion image generation prompts
 - Detailed visual characteristics for photo descriptions
 
@@ -298,7 +298,7 @@ The file includes:
 - Stable Diffusion prompt optimized for image generation
 - Technical details for consistent visual representation
 
-Both files are located in the working directory and can be edited to customize Kuni's personality and appearance. Changes take effect on the next application restart.
+Both files are located in the working directory and can be edited to customize Kumi's personality and appearance. Changes take effect on the next application restart.
 
 > ⚠️ **Important — do not edit the source code to change the prompts.**
 >
@@ -320,7 +320,7 @@ Both files are located in the working directory and can be edited to customize K
 
 ## Monitoring with Prometheus + Grafana
 
-Kuni exposes a Prometheus metrics endpoint on port **9464** that tracks LLM token usage in real time. An optional
+Kumi exposes a Prometheus metrics endpoint on port **9464** that tracks LLM token usage in real time. An optional
 Grafana dashboard is provided for visualization.
 
 ### Metrics
@@ -377,12 +377,12 @@ The dashboard includes:
 
 # FAQ
 
-## Q: How can I rename my Kuni instance?
+## Q: How can I rename my Kumi instance?
 
-A: replace `Kuni` with `CuteAnimeGirlName` across whole project, including `character_base.md` and `character_appearance.md`. Rebuild and restart.
+A: replace `Kumi` with `CuteAnimeGirlName` across whole project, including `character_base.md` and `character_appearance.md`. Rebuild and restart.
 
 
-## Q: How can I make my Kuni treat me as her creator?
+## Q: How can I make my Kumi treat me as her creator?
 
 A: replace `Alex2772` with `YourNerdyNickname` across whole project, including `character_base.md` and `character_appearance.md`. Rebuild and restart.
 
@@ -392,7 +392,7 @@ A: Yes, just don't launch stable diffusion (remove it from docker compose).
 
 Don't specify Ollama search bearer key. I still recommend providing this key because it's free and it will improve her accuracy especially for small models.
 
-In both cases, if your Kuni attempts to use these tools, it will receive an error and will no longer use them.
+In both cases, if your Kumi attempts to use these tools, it will receive an error and will no longer use them.
 
 ## Q: Can I prioritize a chat?
 
@@ -400,22 +400,22 @@ A: Yes, just log in from her account from a regular Telegram client and pin the 
 
 ## Q: Can I deprioritize a chat?
 
-A: Yes, just log in from her account from a regular Telegram client and mute the chat. Kuni will still see the chat and visit it but rarely.
+A: Yes, just log in from her account from a regular Telegram client and mute the chat. Kumi will still see the chat and visit it but rarely.
 
 ## Q: Can I provide a news channel for her?
 
-A: Yes, just log in from her account from a regular Telegram client and subscribe to a Telegram channel. Kuni will now known what's going on in
+A: Yes, just log in from her account from a regular Telegram client and subscribe to a Telegram channel. Kumi will now known what's going on in
 the world.
 
-**Note** Both original Kuni and her sisters don't like to discuss political stuff.
+**Note** Both original Kumi and her sisters don't like to discuss political stuff.
 
-## Q: Can I prevent other people to text my Kuni?
+## Q: Can I prevent other people to text my Kumi?
 
 A: Yes, just log in from her account from a regular Telegram client and adjust her privacy settings.
 
-**I recommend** locking down your Kuni completely to reduce security risks.
+**I recommend** locking down your Kumi completely to reduce security risks.
 
-**Note** Telegram pushes premium users so hard, make sure they can't text your Kuni as well.
+**Note** Telegram pushes premium users so hard, make sure they can't text your Kumi as well.
 
 ## Q: Can I use a local text model with her?
 
@@ -431,8 +431,8 @@ A: moral stuff aside, yes. Just write to diary entries in `data/diary/`, or text
 DON'T TELL HER YOU HAVE OVERWRITTEN HER MEMORY.
 
 
-## Q: What context window size does Kuni require?
+## Q: What context window size does Kumi require?
 
-A: By default, context window size is soft capped by `DIARY_TOKEN_COUNT_TRIGGER = 20000`. This means somewhere around 20K Kuni will dump her context
+A: By default, context window size is soft capped by `DIARY_TOKEN_COUNT_TRIGGER = 20000`. This means somewhere around 20K Kumi will dump her context
 to the diary and restart with clean memory. Thus, 32K will be enough.
 

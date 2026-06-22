@@ -199,7 +199,7 @@ OpenAITools::Tool tools::sendTelegramMessage(
                 }
             }
 
-            // verify that kuni does not repeat itself.
+            // verify that Kuni does not repeat itself.
             // after introducing this quality of dialogs with LLM was significantly increased:
             // - LLM does not copypaste its prior responses
             // - LLM inclined to switch topics or respond nothing "if it has nothing to say", which is more
@@ -207,7 +207,9 @@ OpenAITools::Tool tools::sendTelegramMessage(
             //
             // dirty fix: skip similarity checks if a photo was attached: llm's comment on photo is not much
             // important
-            if (!message.empty() && photoFilename.empty()) {
+            // Embedding similarity is unreliable for the short 1-5 word messages this tool explicitly encourages.
+            // Keep the semantic repetition guard for longer responses only.
+            if (!message.empty() && message.length() > 50 && photoFilename.empty()) {
                 auto target = co_await openAI->embedding({ .config = config::ENDPOINT_EMBEDDING }, message);
                 static AMap<AString, std::valarray<double>> embeddings;
                 double maxSimilarity = 0.0;
@@ -253,7 +255,9 @@ OpenAITools::Tool tools::sendTelegramMessage(
                         throw AException(config::REPEAT_YOURSELF_PROMPT);
                     }
                 }
-                avgSimilarity /= countOfKunisMessages;
+                if (countOfKunisMessages != 0) {
+                    avgSimilarity /= countOfKunisMessages;
+                }
                 if (avgSimilarity > config::REPEAT_YOURSELF_TRIGGER_AVG + giveAHeadStart) {
                     giveAHeadStart += 0.07; // relax repeating after itself check
                     // LLM figured out threshold of REPEAT_YOURSELF_TRIGGER_MAX and indeed it generates

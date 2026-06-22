@@ -31,7 +31,7 @@ static AJson parseResponse(AString content) {
 
 AFuture<ImageGenerator::GalleryImage> ImageGenerator::generate(AString description) {
     ALOG_TRACE(LOG_TAG) << "generate: " << description;
-    AString appearancePrompt = kuni_character::getAppearancePrompt();
+    AString appearancePrompt = Kuni_character::getAppearancePrompt();
     int trialIndex = 0;
 
     naxyi:
@@ -90,7 +90,10 @@ AFuture<ImageGenerator::GalleryImage> ImageGenerator::generate(AString descripti
 
                 if (assessment.satisfied) {
                     ALogger::info(LOG_TAG) << "Satisfied with the result. " << assessment.feedback;
-                    auto dst = APath("data/gallery/{}.png"_format(std::chrono::system_clock::now()));
+                    const auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                               std::chrono::system_clock::now().time_since_epoch())
+                                               .count();
+                    auto dst = APath("data/gallery/{}.png"_format(timestamp));
                     dst.parent().makeDirs();
                     PngImageLoader::save(AFileOutputStream{ dst }, *lastImage);
                     co_return GalleryImage{ .image = lastImage, .path = dst.absolute() };
@@ -274,37 +277,36 @@ AFuture<ImageGenerator::AssessmentResult> ImageGenerator::assessImage(const AIma
     auto params = mChatParams;
     // Note: mChatParams.config should ideally be a vision-capable model.
     params.systemPrompt = R"(
-You are an extremely strict image critic and Stable Diffusion quality gate.
+ You are a practical image critic and Stable Diffusion quality gate.
 
 You will be shown an image generated from a user description and a character appearance prompt.
-Your job is to decide whether the image is an almost perfect match.
-Be exceptionally picky: if there is any noticeable flaw, ambiguity, inconsistency, or implausible composition, reject it.
+ Your job is to decide whether the image is good enough to show to the user.
+ Judge the overall result and reject only material, clearly visible problems. Do not demand pixel-perfect or literal
+ reproduction of every prompt detail.
 
-Reject the image if ANY of the following are true:
-- Any body part is malformed, missing, duplicated, fused, unnaturally small/large, or placed incorrectly.
-- Hands, fingers, arms, legs, feet, eyes, face, teeth, hair, or clothing look even slightly wrong, distorted, or inconsistent.
-- The character identity or appearance does not closely match the provided description.
-- The pose, physics, or composition is unreasonable or unnatural.
-- The character appears to be floating, flying, suspended, falling incorrectly, or otherwise violating expected
-  gravity/scene logic unless explicitly requested.
-- The scene contains awkward anatomy, weird perspective, broken proportions, or AI-like artifacts.
-- The image has any visible quality issue: blur, low detail, weird textures, melting, extra limbs, duplicate objects,
-  warped edges, bad lighting, or inconsistent shadows.
-- The image only partially satisfies the description.
-- You are uncertain whether the image is correct.
-- Canonical character design was not preserved.
-- Canonical character description includes all known facts about the character; including those that are not directly
-  related to the composition requested by the user.
+ Reject the image if ANY of the following are clearly true:
+- There is a major anatomical defect, such as a duplicated face or limb, fused body parts, or a badly broken face.
+- The image is unreadable or has severe blur, corruption, melting, or other prominent generation artifacts.
+- The number of subjects is wrong, or the main requested subject/action/scene is substantially absent.
+- The character's core identity is missing or replaced by a visibly different character.
+- The result is clearly unusable or unpleasant rather than merely imperfect.
 - If the user's description overrides a canonical detail, the image must follow the description, not the canonical
   detail. Canonical design is the fallback only when the description does not specify an alternative.
 - "explicit nudity", unless asked.
 
-Important rule:
-- If there is any reasonable doubt, set "satisfied" to false.
+Do NOT reject solely because of:
+- Minor variations in hair length, clothing ornament, lighting, background objects, or other secondary details.
+- Details that are subtle, occluded, cropped out, or irrelevant to the requested composition.
+- A plausible stylistic interpretation of the prompt.
+- Small imperfections that an ordinary viewer would not notice without close inspection.
+- Uncertainty about a minor detail.
+
+ Important rule:
+- Set "satisfied" to true when the image is visually appealing, has no major visible defect, preserves the character's
+  recognizable identity, and broadly fulfills the user's request.
 - Use canonical character design as the default baseline, but let the user's description override any conflicting details.
 - If canonical says one thing and description says another, judge the image against the description.
-- Only set "satisfied" to true if the image is excellent, coherent, anatomically correct, compositionally plausible, and
-  closely matches the description.
+- Treat the canonical description as identity guidance, not as a checklist requiring every known fact to be visible.
 
 Output your assessment in JSON format with the following fields:
 - "satisfied": boolean, true if the image is high quality and matches the description.

@@ -28,7 +28,7 @@ struct IOpenAIChat {
         AJson tools = AJson::Array{};
     };
 
-    static constexpr auto EMBEDDING_TAG = "kuni_embedding";
+    static constexpr auto EMBEDDING_TAG = "Kuni_embedding";
     static AString embedImage(AImageView image);
 
     struct String: AString {
@@ -48,7 +48,7 @@ struct IOpenAIChat {
         String reasoning_content; // deepseek requires this
         struct ToolCall {
             String id;
-            int64_t index;
+            int64_t index{};
             String type;
             struct Function {
                 String name;
@@ -173,7 +173,7 @@ AJSON_FIELDS(IOpenAIChat::Message::ToolCall,
              (id, "id", AJsonFieldFlags::OPTIONAL)
              (type, "type", AJsonFieldFlags::OPTIONAL)
              (function, "function", AJsonFieldFlags::OPTIONAL)
-             AJSON_FIELDS_ENTRY(index))
+             (index, "index", AJsonFieldFlags::OPTIONAL))
 
 AJSON_FIELDS(IOpenAIChat::Message,
              (role, "role", AJsonFieldFlags::OPTIONAL)
