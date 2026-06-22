@@ -10,3 +10,7 @@ data/secrets.toml
 /logs
 /tests
 /tdlib
+image_generator_tmp.png
+last_query.json
+last_response.json
+temp.jpg
