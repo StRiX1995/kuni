@@ -3,3 +3,10 @@ cmake-build-**
 *uild*
 .DS_Store
 bin
+data/secrets.toml
+.vscode
+/cache
+/data
+/logs
+/tests
+/tdlib
