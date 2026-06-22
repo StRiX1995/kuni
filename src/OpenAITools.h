@@ -31,6 +31,10 @@ struct OpenAITools {
         // OpenAI strict mode requires every property to be listed in required,
         // so these schemas must use regular (non-strict) function calling.
         bool strict = false;
+        // Deferred tools are executed after every regular tool from the same assistant response.
+        // These fields are runtime policy and are intentionally not serialized into the tool schema.
+        bool deferExecution = false;
+        bool userVisible = false;
         Handler handler;
     };
 
@@ -42,7 +46,13 @@ struct OpenAITools {
      */
     std::function<void(const AString& toolName)> onAfterToolCall;
 
-    AFuture<AVector<IOpenAIChat::Message>> handleToolCalls(const AVector<IOpenAIChat::Message::ToolCall>& toolCalls, const _<MetricsBreadcumbs>& metricsBreadCumbs = nullptr);
+    AFuture<AVector<IOpenAIChat::Message>> handleToolCalls(
+        const AVector<IOpenAIChat::Message::ToolCall>& toolCalls,
+        const _<MetricsBreadcumbs>& metricsBreadCumbs = nullptr);
+
+    [[nodiscard]] bool hadSuccessfulUserVisibleAction() const noexcept {
+        return mHadSuccessfulUserVisibleAction;
+    }
 
     AJson asJson() const;
 
@@ -52,4 +62,5 @@ struct OpenAITools {
 
 private:
     AMap<AString, Tool> mHandlers;
+    bool mHadSuccessfulUserVisibleAction = false;
 };

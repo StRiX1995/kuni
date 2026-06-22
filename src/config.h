@@ -5,6 +5,19 @@
 #include "util/secrets.h"
 
 namespace config {
+    struct TelegramDeliveryConfig {
+        bool humanDelayEnabled = true;
+        int minDelayMs = 800;
+        int maxDelayMs = 6000;
+        int charsPerSecond = 25;
+        int jitterMs = 700;
+        int betweenMessagesMinMs = 400;
+        int betweenMessagesMaxMs = 1200;
+        bool sendTypingAction = true;
+    };
+
+    static constexpr TelegramDeliveryConfig telegramDelivery {};
+
     static constexpr bool CAPABILITY_TAKE_PHOTO = true;
     static constexpr bool CAPABILITY_RECORD_AUDIO = false;
     static constexpr bool CAPABILITY_USE_STICKERS = true;

@@ -21,6 +21,37 @@ static constexpr auto LOG_TAG = "tools::sendTelegramMessage";
 using namespace std::chrono_literals;
 extern std::default_random_engine gRandomEngine;
 
+static std::chrono::milliseconds telegramDeliveryDelay(size_t messageLength, int deliveredMessages) {
+#ifndef AUI_TESTS_MODULE
+    if (!config::telegramDelivery.humanDelayEnabled) {
+        return 0ms;
+    }
+
+    int totalDelay = 0;
+    if (deliveredMessages > 0) {
+        totalDelay += std::uniform_int_distribution<int>(
+            config::telegramDelivery.betweenMessagesMinMs,
+            config::telegramDelivery.betweenMessagesMaxMs)(gRandomEngine);
+    }
+    const int charsPerSecond = config::telegramDelivery.charsPerSecond > 0
+        ? config::telegramDelivery.charsPerSecond
+        : 1;
+    int messageDelay = static_cast<int>(messageLength * 1000 / charsPerSecond) +
+        std::uniform_int_distribution<int>(
+            -config::telegramDelivery.jitterMs,
+            config::telegramDelivery.jitterMs)(gRandomEngine);
+    if (messageDelay < config::telegramDelivery.minDelayMs) {
+        messageDelay = config::telegramDelivery.minDelayMs;
+    }
+    if (messageDelay > config::telegramDelivery.maxDelayMs) {
+        messageDelay = config::telegramDelivery.maxDelayMs;
+    }
+    return std::chrono::milliseconds(totalDelay + messageDelay);
+#else
+    return 0ms;
+#endif
+}
+
 OpenAITools::Tool tools::sendTelegramMessage(
     _<ITelegramClient> telegram,
     _<IOpenAIChat> openAI,
@@ -30,6 +61,7 @@ OpenAITools::Tool tools::sendTelegramMessage(
 
     struct State {
         int messagesInARow = 0;
+        int deliveredMessages = 0;
         int64_t lastReplyToMessageId = 0;
     };
 
@@ -37,8 +69,11 @@ OpenAITools::Tool tools::sendTelegramMessage(
         .name = "send_telegram_message",
         .description = "Sends a message to the \"{}\" chat. Requirements:\n"
            "- before asking them a question, double-check yourself with #ask_query\n"
-           "- you should send multiple small short messgaes. "
-           "Example: (1) \"hi~\", (2) \"how are you?~\". 1-5 words."_format(chat->title_),
+           "- you should send multiple small short messages, 1-5 words each\n"
+           "- IMPORTANT: if you intend to send several messages, return ALL corresponding "
+           "send_telegram_message tool calls together in the SAME assistant response. "
+           "After these calls are delivered, you will not receive another turn to send follow-ups.\n"
+           "Example: return two tool calls in one response: (1) \"hi~\", (2) \"how are you?~\"."_format(chat->title_),
         .parameters =
             {
                 .properties =
@@ -66,6 +101,8 @@ OpenAITools::Tool tools::sendTelegramMessage(
                     },
                 .required = {},
             },
+        .deferExecution = true,
+        .userVisible = true,
         .handler = [telegram = std::move(telegram),
                     openAI = std::move(openAI),
                     chat = std::move(chat),
@@ -77,22 +114,6 @@ OpenAITools::Tool tools::sendTelegramMessage(
                 // stupid AI can't recognize it spams messages despite the warning
                 throw AException("Too many messages in a row. Don't spam!");
             }
-
-            auto isTyping = _new<std::atomic_bool>(true);
-            auto typingCoro = [](_weak<ITelegramClient> telegram, int64_t chatId, _<std::atomic_bool> isTyping) -> AFuture<> {
-                while (isTyping->load()) {
-                    {
-                        auto tg = telegram.lock();
-                        if (tg == nullptr) {
-                            // we don't want to prolong lifetime of telegram (mostly because of unit tests)
-                            break;
-                        }
-                        tg->sendQuery(ITelegramClient::toPtr(td::td_api::sendChatAction(chatId, {}, {}, ITelegramClient::toPtr(td::td_api::chatActionTyping()))));
-                    }
-                    co_await AThread::asyncSleep(500ms);
-                }
-            }(telegram, chat->id_, isTyping);
-            AUI_DEFER { isTyping->store(false); };
 
             if (ctx.args.contains("chat_id")) {
                 if (ctx.args["chat_id"].asLongInt() != chat->id_) {
@@ -290,13 +311,6 @@ OpenAITools::Tool tools::sendTelegramMessage(
             }
 
 
-            auto simulateTypingDelay = [](size_t messageLength) {
-                // random wait. You definitely don't want to receive 4 large messages in 1 sec right?
-                static std::default_random_engine re(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-                static std::uniform_int_distribution<int> dist(10, 50);
-                return AThread::asyncSleep((messageLength + 1) * dist(re) * 1ms);
-            };
-
             // actually send a message. we don't really need to wait until tdlib reports message sent
             // successfully (this is exactly when in telegram desktop the message status changes from clock
             // to one tick).
@@ -307,7 +321,11 @@ OpenAITools::Tool tools::sendTelegramMessage(
                 // we will split manually.
 
                 for (auto line : message.split("\n")) {
-                    co_await simulateTypingDelay(line.length());
+                    if (config::telegramDelivery.sendTypingAction) {
+                        co_await telegram->sendQuery(ITelegramClient::toPtr(td::td_api::sendChatAction(
+                            chat->id_, {}, {}, ITelegramClient::toPtr(td::td_api::chatActionTyping()))));
+                    }
+                    co_await AThread::asyncSleep(telegramDeliveryDelay(line.length(), state->deliveredMessages));
                     // std::exchange: we want all attachments go to the first message.
                     co_await util::telegramPostMessage(*telegram,
                                                        chat->id_,
@@ -315,10 +333,16 @@ OpenAITools::Tool tools::sendTelegramMessage(
                                                        std::exchange(photo, {}),
                                                        std::exchange(audioPath, {}),
                                                        replyTo);
+                    ++state->deliveredMessages;
                 }
             } else {
-                co_await simulateTypingDelay(message.length());
+                if (config::telegramDelivery.sendTypingAction) {
+                    co_await telegram->sendQuery(ITelegramClient::toPtr(td::td_api::sendChatAction(
+                        chat->id_, {}, {}, ITelegramClient::toPtr(td::td_api::chatActionTyping()))));
+                }
+                co_await AThread::asyncSleep(telegramDeliveryDelay(message.length(), state->deliveredMessages));
                 co_await util::telegramPostMessage(*telegram, chat->id_, message, std::move(photo), std::move(audioPath), replyTo);
+                ++state->deliveredMessages;
             }
 
 
@@ -326,20 +350,7 @@ OpenAITools::Tool tools::sendTelegramMessage(
 
             ++state->messagesInARow;
 
-            if (state->messagesInARow > 5) {
-                co_return "Message sent successfully to \"{}\". Warning: you have sent {} messages in a row! Give your participant space to breathe!"_format(chat->title_, state->messagesInARow);
-            }
-            if (state->messagesInARow < 3) {
-                // in addition to prompt, we'll encourage llm to add a follow-up messages to make dialogs more
-                // natural:
-                // - (1) hi~
-                // - (2) how are you?
-                // it is still up to LLM to decide whether or not to add follow-ups.
-                co_return "Message sent successfully to \"{}\". You should add a follow-up #send_telegram_message."_format(chat->title_);
-            }
-
-            // llm really likes success messages.
-            co_return "Message sent successfully to \"{}\"."_format(chat->title_);
+            co_return "ok: message sent";
         },
     };
 }

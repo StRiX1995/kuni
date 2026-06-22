@@ -102,6 +102,8 @@ OpenAITools::Tool tools::stickers::send(_<ITelegramClient> telegram, _<td::td_ap
             },
             .required = {"sticker_id"},
         },
+        .deferExecution = true,
+        .userVisible = true,
         .handler = [telegram = std::move(telegram), chat = std::move(chat)](OpenAITools::Ctx ctx) -> AFuture<AString> {
             const auto stickerId = util::jsonAsLongInt(ctx.args["sticker_id"]).valueOrException("sticker_id integer required");
             const auto replyTo = util::jsonAsLongInt(ctx.args["reply_to_message_id"]).valueOr(0);
@@ -141,7 +143,7 @@ OpenAITools::Tool tools::stickers::send(_<ITelegramClient> telegram, _<td::td_ap
                 return msg;
             }());
 
-            co_return "Sticker \"{}\" sent successfuly to {}"_format(stickerId, chat->title_);
+            co_return "ok: sticker sent";
         },
     };
 }

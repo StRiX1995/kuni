@@ -423,6 +423,111 @@ TEST(OpenAITools, ToJsonNoParameters) {
     EXPECT_EQ(json[0]["function"]["parameters"]["type"].asString(), "object");
 }
 
+TEST(OpenAITools, DefersUserVisibleToolsAndPreservesResultOrder) {
+    AVector<AString> executionOrder;
+    OpenAITools tools = {
+        {
+            .name = "visible",
+            .deferExecution = true,
+            .userVisible = true,
+            .handler = [&](OpenAITools::Ctx) -> AFuture<AString> {
+                executionOrder << "visible";
+                co_return "ok: visible";
+            },
+        },
+        {
+            .name = "private",
+            .handler = [&](OpenAITools::Ctx) -> AFuture<AString> {
+                executionOrder << "private";
+                co_return "private result";
+            },
+        },
+        {
+            .name = "visible_two",
+            .deferExecution = true,
+            .userVisible = true,
+            .handler = [&](OpenAITools::Ctx) -> AFuture<AString> {
+                executionOrder << "visible_two";
+                co_return "ok: visible two";
+            },
+        },
+        {
+            .name = "visible_three",
+            .deferExecution = true,
+            .userVisible = true,
+            .handler = [&](OpenAITools::Ctx) -> AFuture<AString> {
+                executionOrder << "visible_three";
+                co_return "ok: visible three";
+            },
+        },
+    };
+    AVector<IOpenAIChat::Message::ToolCall> calls = {
+        {
+            .id = "call-visible",
+            .type = "function",
+            .function = {.name = "visible", .arguments = "{}"},
+        },
+        {
+            .id = "call-private",
+            .type = "function",
+            .function = {.name = "private", .arguments = "{}"},
+        },
+        {
+            .id = "call-visible-two",
+            .type = "function",
+            .function = {.name = "visible_two", .arguments = "{}"},
+        },
+        {
+            .id = "call-visible-three",
+            .type = "function",
+            .function = {.name = "visible_three", .arguments = "{}"},
+        },
+    };
+
+    auto result = await(tools.handleToolCalls(calls));
+
+    EXPECT_EQ(executionOrder, (AVector<AString>{"private", "visible", "visible_two", "visible_three"}));
+    ASSERT_EQ(result.size(), 4);
+    EXPECT_EQ(result[0].tool_call_id, "call-visible");
+    EXPECT_EQ(result[0].content, "ok: visible");
+    EXPECT_EQ(result[1].tool_call_id, "call-private");
+    EXPECT_EQ(result[1].content, "private result");
+    EXPECT_EQ(result[2].tool_call_id, "call-visible-two");
+    EXPECT_EQ(result[2].content, "ok: visible two");
+    EXPECT_EQ(result[3].tool_call_id, "call-visible-three");
+    EXPECT_EQ(result[3].content, "ok: visible three");
+    EXPECT_TRUE(tools.hadSuccessfulUserVisibleAction());
+}
+
+TEST(OpenAITools, HandlerCanReplaceToolSetDuringExecution) {
+    OpenAITools tools{};
+    tools.insert({
+        .name = "open",
+        .handler = [](OpenAITools::Ctx ctx) -> AFuture<AString> {
+            ctx.tools = OpenAITools {{
+                .name = "send_telegram_message",
+                .deferExecution = true,
+                .userVisible = true,
+                .handler = [](OpenAITools::Ctx) -> AFuture<AString> {
+                    co_return "ok: message sent";
+                },
+            }};
+            co_return "chat opened";
+        },
+    });
+
+    auto result = await(tools.handleToolCalls({{
+        .id = "call-open",
+        .type = "function",
+        .function = {.name = "open", .arguments = "{}"},
+    }}));
+
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].content, "chat opened");
+    EXPECT_FALSE(tools.handlers().contains("open"));
+    EXPECT_TRUE(tools.handlers().contains("send_telegram_message"));
+}
+
 // =====================================================================
 // IOpenAIChat::Message serialization to JSON (without embedding tags)
 // =====================================================================

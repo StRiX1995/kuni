@@ -126,8 +126,7 @@ TEST(SendTelegramMessageTest, SuccessSimpleText) {
         .allToolCalls = {},
     }));
 
-    EXPECT_TRUE(result.contains("sent successfully")) << "result = " << result;
-    EXPECT_TRUE(result.contains("Test Chat")) << "result = " << result;
+    EXPECT_EQ(result, "ok: message sent");
 }
 
 // ===========================================================================
@@ -312,7 +311,7 @@ TEST(SendTelegramMessageTest, ReplyToExistingMessage) {
         .allToolCalls = {},
     }));
 
-    EXPECT_TRUE(result.contains("sent successfully")) << "result = " << result;
+    EXPECT_EQ(result, "ok: message sent");
 }
 
 // ===========================================================================
@@ -347,7 +346,7 @@ TEST(SendTelegramMessageTest, TooManyMessagesInRowThrows) {
                 .args = AJson::Object{{"text", "msg{}"_format(i)}},
                 .allToolCalls = {},
             }));
-            EXPECT_TRUE(result.contains("sent successfully")) << "at iteration " << i << ": " << result;
+            EXPECT_EQ(result, "ok: message sent") << "at iteration " << i;
         }
     };
 
@@ -386,7 +385,7 @@ TEST(SendTelegramMessageTest, MultiLineMessageGetsSplit) {
         .allToolCalls = {},
     }));
 
-    EXPECT_TRUE(result.contains("sent successfully")) << "result = " << result;
+    EXPECT_EQ(result, "ok: message sent");
 }
 
 // ===========================================================================
@@ -405,8 +404,7 @@ TEST(SendTelegramMessageTest, InvalidPhotoFilenameSlash) {
             co_return co_await dispatchSendQuery(std::move(f));
         });
     EXPECT_CALL(*openAI, embedding(testing::_, testing::_))
-        .Times(0)
-        .WillRepeatedly(testing::Return(AFuture(std::valarray<double>{-0.2})));
+        .Times(0);
 
     auto tool = tools::sendTelegramMessage(
         telegram, openAI, chat, std::move(messages), std::valarray<double>{});
@@ -580,7 +578,7 @@ TEST(SendTelegramMessageTest, RepeatDetectionThrows) {
 // ===========================================================================
 // sendTelegramMessage – First message encourages follow-up
 // ===========================================================================
-TEST(SendTelegramMessageTest, FirstMessageEncouragesFollowUp) {
+TEST(SendTelegramMessageTest, CompactSuccessResult) {
     auto telegram = _new<TelegramMock>();
     auto openAI = _new<OpenAIMock>();
     auto chat = makeChat("Test Chat");
@@ -594,7 +592,7 @@ TEST(SendTelegramMessageTest, FirstMessageEncouragesFollowUp) {
         });
 
     EXPECT_CALL(*openAI, embedding(testing::_, testing::_))
-        .Times(1)
+        .Times(0)
         .WillRepeatedly(testing::Return(AFuture(std::valarray<double>{-0.2})));
 
     auto tool = tools::sendTelegramMessage(
@@ -607,5 +605,5 @@ TEST(SendTelegramMessageTest, FirstMessageEncouragesFollowUp) {
         .allToolCalls = {},
     }));
 
-    EXPECT_TRUE(result.contains("follow-up")) << "result = " << result;
+    EXPECT_EQ(result, "ok: message sent");
 }

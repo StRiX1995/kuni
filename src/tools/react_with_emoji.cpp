@@ -18,6 +18,8 @@ OpenAITools::Tool tools::reactWithEmoji(_<ITelegramClient> telegram, _<td::td_ap
             },
             .required = {"message_id", "emoji"},
         },
+        .deferExecution = true,
+        .userVisible = true,
         .handler = [telegram = std::move(telegram), chat = std::move(chat)](OpenAITools::Ctx ctx) -> AFuture<AString> {
             if (ctx.args.contains("chat_id")) {
                 if (ctx.args["chat_id"].asLongInt() != chat->id_) {
@@ -35,7 +37,7 @@ OpenAITools::Tool tools::reactWithEmoji(_<ITelegramClient> telegram, _<td::td_ap
             reaction->update_recent_reactions_ = true;
 
             co_await telegram->sendQueryWithResult(std::move(reaction));
-            co_return "Reaction {} added successfully."_format(emoji);
+            co_return "ok: reaction added";
         },
     };
 }

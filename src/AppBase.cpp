@@ -294,7 +294,9 @@ AppBase::AppBase(Init init): mInit(std::move(init)), mDiary({
                         goto naxyi_preserve_ctx;
                     }
                     {
-                        auto toolCalls = co_await notification.actions.handleToolCalls(botAnswer.choices.at(0).message.tool_calls, self.metricBreadcumbs());
+                        auto toolCalls = co_await notification.actions.handleToolCalls(
+                            botAnswer.choices.at(0).message.tool_calls,
+                            self.metricBreadcumbs());
                         if (ranges::any_of(toolCalls, [](const IOpenAIChat::Message& msg) { return msg.content.contains(IOpenAIChat::EMBEDDING_TAG); })) {
                             // Indicates a low quality tool call.
                             //
@@ -321,6 +323,13 @@ AppBase::AppBase(Init init): mInit(std::move(init)), mDiary({
                         self.mTemporaryContext << std::move(toolCalls);
                         ALOG_DEBUG(LOG_TAG) << "Tool call response: " << self.mTemporaryContext.last().content;
                         AUI_ASSERT(AThread::current() == self.getThread());
+
+                        // All queued messages/reactions/stickers from this assistant response have now been delivered.
+                        // End the notification instead of asking the main model for another action and paying for the
+                        // complete context again. A single assistant response may still contain multiple visible calls.
+                        if (notification.actions.hadSuccessfulUserVisibleAction()) {
+                            pauseFlag = true;
+                        }
                     }
 
                     if (pauseFlag) {
@@ -333,11 +342,7 @@ AppBase::AppBase(Init init): mInit(std::move(init)), mDiary({
                     if (!notification.actions.handlers().empty()) {
                         self.mTemporaryContext.last().content += "\nWhat's your next action? Use a `tool` to act. Use #ask to consult with your knowledge database. The following tools available: " + AStringVector(notification.actions.handlers().keyVector()).join(", ");
                     }
-                    if (ranges::any_of(botAnswer.choices.at(0).message.tool_calls, [](const IOpenAIChat::Message::ToolCall& t){ return t.function.name == "send_telegram_message"; })) {
-                        goto naxyi_preserve_ctx;
-                    } else {
-                        goto naxyi_populate_ctx;
-                    }
+                    goto naxyi_populate_ctx;
                 } catch (const AException& e) {
                     ALogger::err(LOG_TAG) << "Failed to process notification: \"" << notification.message << "\"" << e;
                     if (e.getMessage().lowercase().contains("json")) {

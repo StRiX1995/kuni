@@ -61,6 +61,33 @@ static AFuture<IOpenAIChat::Response> makeWaitResponse() {
     co_return resp;
 }
 
+static AFuture<IOpenAIChat::Response> makeToolResponse(AString name) {
+    IOpenAIChat::Message msg;
+    msg.role = IOpenAIChat::Message::Role::ASSISTANT;
+    msg.tool_calls = {
+        IOpenAIChat::Message::ToolCall{
+            .id = "call_visible_1",
+            .index = 0,
+            .type = "function",
+            .function = {
+                .name = std::move(name),
+                .arguments = "{}",
+            },
+        },
+    };
+
+    IOpenAIChat::Response resp;
+    resp.choices = {
+        IOpenAIChat::Response::Choice{
+            .index = 0,
+            .message = std::move(msg),
+            .finish_reason = "tool_calls",
+        },
+    };
+    resp.usage = { .prompt_tokens = 10, .completion_tokens = 5, .total_tokens = 15 };
+    co_return resp;
+}
+
 // ============================================================================
 // Helper: create an embedding result (dummy vector)
 // ============================================================================
@@ -160,6 +187,34 @@ TEST_F(AppBaseUnitTest, PassNotificationToAIBasic) {
 
     // The notification should have been processed — context is non-empty
     EXPECT_FALSE(app.temporaryContext().empty());
+}
+
+TEST_F(AppBaseUnitTest, UserVisibleBatchFinishesNotificationWithoutAnotherLlmCall) {
+    AAsyncHolder async;
+    AEventLoop loop;
+    IEventLoop::Handle h(&loop);
+
+    auto openAI = _cast<IOpenAIChat>(_new<OpenAIMock>());
+    EXPECT_CALL(*static_cast<OpenAIMock*>(openAI.get()), chat(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(makeToolResponse("visible_action")));
+
+    OpenAITools actions {
+        {
+            .name = "visible_action",
+            .deferExecution = true,
+            .userVisible = true,
+            .handler = [](OpenAITools::Ctx) -> AFuture<AString> {
+                co_return "ok: delivered";
+            },
+        },
+    };
+
+    AppTestHarness app(openAI);
+    async << app.passNotificationToAI("Test visible action", std::move(actions)).onProcessed;
+    while (async.size() > 0) {
+        loop.iteration();
+    }
 }
 
 // ============================================================================
